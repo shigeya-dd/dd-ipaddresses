@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-##### shigeya.tanabe@datadoghq.com
+### shigeya.tanabe@datadoghq.com
+###
+### Usage (CSV): python3 dd-iplist.py
+### Usage (JSON): python3 dd-iplist.py -j
 
 import ipaddress
 import requests # pip3 install requests
 import json
+import sys
 
 def get_region(dd_ip, aws_iplist):
     ip = ipaddress.ip_address(dd_ip)
@@ -15,6 +19,10 @@ def get_region(dd_ip, aws_iplist):
     return region
 
 if __name__ == '__main__':
+    out_format = "csv"
+    if (len(sys.argv) == 2 and sys.argv[1] == "-j"):
+        out_format = "json"
+
     service = "synthetics"
     # service = "webhooks"
     url_dd = "https://ip-ranges.datadoghq.com/%s.json" % service
@@ -32,6 +40,13 @@ if __name__ == '__main__':
         ip_list.append([dd_ip, get_region(dd_ip, json_aws['prefixes'])])
 
     ip_list.sort(key=lambda x: x[1])
-    for ip in ip_list:
-        print(*ip, sep=',')
+    if(out_format == "json"):
+        ip_list_json = []
+        for ip, region in ip_list:
+            ip_list_json.append({'ip_address':"%s/32" % ip, 'region': region})
+        json_dd[service]["prefixes_ipv4_region"] = ip_list_json
+        print(json.dumps(json_dd, indent = 4))
+    else:
+        for ip in ip_list:
+            print(*ip, sep=',')
 
